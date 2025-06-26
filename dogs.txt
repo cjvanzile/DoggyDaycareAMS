@@ -1,0 +1,20 @@
+1,Buddy,Labrador Retriever,2018-03-14,1,M,Y,true
+2,Luna,German Shepherd,2019-07-22,2,F,Y,false
+3,Max,Bulldog,2017-10-30,1,M,N,true
+4,Bella,Poodle,2020-02-18,3,F,Y,true
+5,Charlie,Beagle,2016-06-09,0,M,U,false
+6,Molly,Boxer,2019-12-25,2,F,N,true
+7,Rocky,Golden Retriever,2015-04-02,1,M,Y,true
+8,Daisy,Yorkshire Terrier,2021-01-11,3,F,U,false
+9,Bailey,Siberian Husky,2018-09-29,2,F,Y,true
+10,Cooper,Dachshund,2017-11-15,0,M,N,false
+11,Maggie,Shih Tzu,2016-03-08,3,F,Y,true
+12,Tucker,Australian Shepherd,2020-05-23,1,M,Y,false
+13,Lola,Corgi,2019-08-20,2,F,N,true
+14,Bear,Boston Terrier,2018-12-03,1,M,U,true
+15,Sadie,Pug,2015-07-19,0,F,Y,false
+16,Zoe,Chihuahua,2017-04-28,2,F,Y,true
+17,Oliver,Great Dane,2021-03-07,3,M,N,true
+18,Ruby,Pointer,2019-10-17,1,F,U,false
+19,Leo,Rottweiler,2016-08-14,2,M,Y,true
+20,Penny,Miniature Schnauzer,2018-11-21,3,F,N,true
