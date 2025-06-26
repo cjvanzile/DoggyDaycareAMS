@@ -180,6 +180,8 @@ class DoggyDaycareAMSTest {
 
         // Test to ensure Attendance Report is generated
         // If attendance report fails, an empty string is returned
+        // This will never fail
         assertNotEquals("", manager.generateAttendanceReport(), "Attendance Report failed.");
+
     }
 }
