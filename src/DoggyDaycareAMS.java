@@ -21,7 +21,7 @@ public class DoggyDaycareAMS {
      * This is where the program starts.
      */
     public static void main(String[] args) {
-        DoggyDaycareAMS app = new DoggyDaycareAMS();
+       DoggyDaycareAMS app = new DoggyDaycareAMS();
         app.run();
     }
 
@@ -88,20 +88,28 @@ public class DoggyDaycareAMS {
     private void handleLoadFile() {
         System.out.print("Enter filename to load (ex: data.txt): ");
         String filename = scanner.nextLine().trim();
+        if (!loadFile(filename)) {
+            System.out.println("File not found or not readable.");
+        }
+    }
+
+    public boolean loadFile (String filename) {
         File file = new File(filename);
         // Check that file actually exists before trying to read
         if (!file.exists() || !file.isFile()) {
-            System.out.println("File not found or not readable.");
-            return;
+            return false;
         }
         try {
             int added = manager.loadFromFile(filename); // Try to load records
             System.out.println("Loaded " + added + " dog records from file.");
+            return true;
         } catch (IOException e) {
             // Something went wrong while reading
-            System.out.println("Error reading file.");
+            return false;
         }
     }
+
+
 
     /*
      * Prints all dogs currently in the system.
