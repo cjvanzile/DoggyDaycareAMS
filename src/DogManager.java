@@ -16,12 +16,22 @@ public class DogManager {
     // List to hold all Dog objects in memory for the current session
     private ArrayList<Dog> dogs;
 
+    // List to hold all Dog objects checked-in in memory for the current session
+    public ArrayList<Dog> dogsCheckedIn;
+
+    // Info for attendance report
+    int checkedInCount = 0;
+    int[] foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
+    StringBuilder checkedInList = new StringBuilder();
+
+
     /*
      * Constructor: starts with an empty list of dogs.
      * We always use the same DogManager throughout the program.
      */
     public DogManager() {
         dogs = new ArrayList<>();
+        dogsCheckedIn = new ArrayList<>();
     }
 
     /*
@@ -92,6 +102,7 @@ public class DogManager {
      * Returns the number of records successfully added.
      */
     public int loadFromFile(String filename) throws IOException {
+        dogs = new ArrayList<>(); // Clear out existing dog list
         int addedCount = 0;
         BufferedReader br = new BufferedReader(new FileReader(filename));
         String line;
@@ -128,9 +139,10 @@ public class DogManager {
      * Now also lists each checked-in dog's info in detail.
      */
     public String generateAttendanceReport() {
-        int checkedInCount = 0;
-        int[] foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
-        StringBuilder checkedInList = new StringBuilder();
+        dogsCheckedIn = new ArrayList<>(); // Clear out checked-in list
+        checkedInCount = 0;
+        foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
+        checkedInList = new StringBuilder();
 
         // For every checked-in dog, add up food needs and collect info
         for (Dog dog : dogs) {
@@ -141,6 +153,7 @@ public class DogManager {
                     foodTotals[food]++;
                 }
                 checkedInList.append(dog).append("\n"); // Use Dog's toString() to show all info
+                dogsCheckedIn.add(dog); // Add dog to checked-in dogs
             }
         }
 
