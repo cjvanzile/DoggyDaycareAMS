@@ -1,5 +1,6 @@
+import javax.swing.*;
+import java.sql.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -24,7 +25,6 @@ public class DogManager {
     int[] foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
     StringBuilder checkedInList = new StringBuilder();
 
-
     /*
      * Constructor: starts with an empty list of dogs.
      * We always use the same DogManager throughout the program.
@@ -38,61 +38,150 @@ public class DogManager {
      * Adds a new dog record if the ID doesn't exist yet.
      * Returns true if successful; false if the ID was a duplicate.
      */
-    public boolean addDog(Dog dog) {
-        if (findDogById(dog.getId()) != null) {
+    public boolean addDog(Dog dog, Connection conn) throws SQLException {
+        if (findDogById(dog.getId(), conn) != null) {
             // Don't add if a dog with this ID already exists (to avoid duplicates)
             return false;
         }
-        dogs.add(dog);
-        return true;
+
+        String sqlInsert = "INSERT INTO dogs (id, name, breed, dob, food, gender, spayedneutered, checkedin) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+
+        PreparedStatement stmtInsert = conn.prepareStatement(sqlInsert);
+
+        stmtInsert.setInt(1, dog.getId());
+        stmtInsert.setString(2, dog.getName());
+        stmtInsert.setString(3, dog.getBreed());
+        stmtInsert.setString(4, dog.getDob());
+        stmtInsert.setInt(5,  dog.getFood());
+        stmtInsert.setString(6, dog.getGender());
+        stmtInsert.setString(7, dog.getSpayedNeutered());
+        stmtInsert.setBoolean(8, dog.isCheckedIn());
+
+        try {
+            stmtInsert.executeUpdate();
+        }  catch (SQLException ex) {
+            return false;
+        }
+
+        return  true;
     }
 
     /*
      * Lets other classes see all the current dog records.
      * This is read-only; you can't change the list directly from outside.
      */
-    public List<Dog> getAllDogs() {
-        return Collections.unmodifiableList(dogs);
+    public List<Dog> getDogs(Boolean checkedIn, Connection conn) throws SQLException {
+        List<Dog> allDogs = new ArrayList<>();
+
+        String sqlSelect = "SELECT * FROM dogs" + (checkedIn ? " WHERE checkedin = true" : "")
+                + " ORDER BY name ASC";
+        Statement stmtSelect = conn.createStatement();
+        ResultSet rs = stmtSelect.executeQuery(sqlSelect);
+        while (rs.next()) {
+            Dog dog = new Dog(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("breed"),
+                    rs.getString("dob"),
+                    rs.getInt("food"),
+                    rs.getString("gender"),
+                    rs.getString("spayedneutered"),
+                    rs.getBoolean("checkedin")
+            );
+            allDogs.add(dog);
+        }
+        return allDogs;
     }
 
     /*
      * Removes a dog by their unique ID.
      * Returns true if the dog was found and removed; false otherwise.
      */
-    public boolean removeDog(int id) {
-        Dog dog = findDogById(id);
-        if (dog != null) {
-            dogs.remove(dog);
-            return true;
+    public Dog removeDog(int id,  Connection conn) throws SQLException {
+        Dog dog = findDogById(id, conn);
+        if (dog == null) {
+            // Don't add if a dog with this ID already exists (to avoid duplicates)
+            return null;
         }
-        return false;
+
+        String sqlDelete = "DELETE FROM dogs WHERE id = ?;";
+        PreparedStatement stmtDelete = conn.prepareStatement(sqlDelete);
+        stmtDelete.setInt(1, id);
+
+        try {
+            stmtDelete.executeUpdate();
+        }  catch (SQLException ex) {
+            return null;
+        }
+
+        return dog;
     }
 
     /*
      * Updates the entire dog record for a specific ID.
      * Returns true if successful, false if the ID was not found.
      */
-    public boolean updateDog(int id, Dog updatedDog) {
-        for (int i = 0; i < dogs.size(); i++) {
-            if (dogs.get(i).getId() == id) {
-                dogs.set(i, updatedDog); // Replace the old dog with the new info
-                return true;
-            }
+    public boolean updateDog(int id, Dog updatedDog, Connection conn) throws SQLException {
+        if (findDogById(id, conn) == null) {
+            // Don't add if a dog with this ID already exists (to avoid duplicates)
+            return false;
         }
-        return false;
+
+        String sqlUpdate = "UPDATE dogs SET " +
+                "name = ?, " +
+                "breed = ?, " +
+                "dob = ?, " +
+                "food = ?, " +
+                "gender = ?, " +
+                "spayedneutered = ?, " +
+                "checkedin = ? " +
+                "WHERE id = ?;";
+
+        PreparedStatement stmtUpdate = conn.prepareStatement(sqlUpdate);
+
+        stmtUpdate.setString(1, updatedDog.getName());
+        stmtUpdate.setString(2, updatedDog.getBreed());
+        stmtUpdate.setString(3, updatedDog.getDob());
+        stmtUpdate.setInt(4,  updatedDog.getFood());
+        stmtUpdate.setString(5, updatedDog.getGender());
+        stmtUpdate.setString(6, updatedDog.getSpayedNeutered());
+        stmtUpdate.setBoolean(7, updatedDog.isCheckedIn());
+        stmtUpdate.setInt(8, id);
+
+        try {
+            stmtUpdate.executeUpdate();
+        }  catch (SQLException ex) {
+            return false;
+        }
+
+        return  true;
     }
 
     /*
      * Searches for a dog by ID.
      * Returns the Dog object if found, or null if not found.
      */
-    public Dog findDogById(int id) {
-        for (Dog dog : dogs) {
-            if (dog.getId() == id) {
-                return dog;
-            }
+    public Dog findDogById(int id, Connection conn) throws SQLException {
+        String sqlSelect = "SELECT * FROM dogs WHERE ID = ?";
+        PreparedStatement stmtSelect = conn.prepareStatement(sqlSelect);
+        stmtSelect.setInt(1, id);
+        ResultSet rs = stmtSelect.executeQuery();
+        if (rs.next()) {
+            Dog dog = new Dog(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("breed"),
+                    rs.getString("dob"),
+                    rs.getInt("food"),
+                    rs.getString("gender"),
+                    rs.getString("spayedneutered"),
+                    rs.getBoolean("checkedin")
+            );
+            return dog;
+        } else {
+            return null;
         }
-        return null;
     }
 
     /*
@@ -101,18 +190,22 @@ public class DogManager {
      * Adds only new records (no duplicates). Skips malformed lines.
      * Returns the number of records successfully added.
      */
-    public int loadFromFile(String filename) throws IOException {
-        dogs = new ArrayList<>(); // Clear out existing dog list
-        int addedCount = 0;
+    public void loadFromFile(String filename, Connection conn) throws IOException, SQLException {
         BufferedReader br = new BufferedReader(new FileReader(filename));
         String line;
+
+        int cntSuccess = 0;
+        int cntFail = 0;
+
         while ((line = br.readLine()) != null) {
             try {
                 // Try to parse each field; skip if anything is wrong
                 String[] parts = line.split(",");
                 if (parts.length != 8) {
+                    cntFail++;
                     continue; // Not enough fields
                 }
+
                 int id = Integer.parseInt(parts[0].trim());
                 String name = parts[1].trim();
                 String breed = parts[2].trim();
@@ -121,54 +214,60 @@ public class DogManager {
                 String gender = parts[5].trim();
                 String spayedNeutered = parts[6].trim();
                 boolean checkedIn = Boolean.parseBoolean(parts[7].trim());
+
                 Dog dog = new Dog(id, name, breed, dob, food, gender, spayedNeutered, checkedIn);
-                // Only add if ID does not already exist in the system
-                if (addDog(dog)) {
-                    addedCount++;
-                }
+
+                if (addDog(dog, conn))
+                    cntSuccess++;
+                else
+                    cntFail++;
+
             } catch (Exception e) {
                 // Skip any line with problems (bad number format, etc.)
+                cntFail++;
             }
         }
         br.close();
-        return addedCount;
+        JOptionPane.showMessageDialog(null, "Loaded " + cntSuccess + " dog(s) successfully!\n\n"
+            + "failed to load " + cntFail + " dogs.");
     }
 
     /*
      * Custom action: creates a report of checked-in dogs and food types needed.
      * Now also lists each checked-in dog's info in detail.
      */
-    public String generateAttendanceReport() {
+    public String generateAttendanceReport(Connection conn) throws SQLException {
         dogsCheckedIn = new ArrayList<>(); // Clear out checked-in list
         checkedInCount = 0;
         foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
         checkedInList = new StringBuilder();
 
+        List<Dog> dogs = getDogs(true, conn);
+
         // For every checked-in dog, add up food needs and collect info
         for (Dog dog : dogs) {
-            if (dog.isCheckedIn()) {
-                checkedInCount++;
-                int food = dog.getFood();
-                if (food >= 0 && food <= 3) {
-                    foodTotals[food]++;
-                }
-                checkedInList.append(dog).append("\n"); // Use Dog's toString() to show all info
-                dogsCheckedIn.add(dog); // Add dog to checked-in dogs
+            checkedInCount++;
+            int food = dog.getFood();
+            if (food >= 0 && food <= 3) {
+                foodTotals[food]++;
             }
+            checkedInList.append(dog).append("\n"); // Use Dog's toString() to show all info
+            dogsCheckedIn.add(dog); // Add dog to checked-in dogs
         }
 
         // Create a formatted summary to print or return
         String report = "";
         report += "Attendance Report:\n";
+        report += "--\n";
         report += "Dogs currently checked in: " + checkedInCount + "\n";
-        report += "-------------------------------------------\n";
+        report += "--\n";
         if (checkedInCount == 0) {
             report += "No dogs are currently checked in.\n";
         } else {
             report += "Checked-In Dog Details:\n";
             report += checkedInList.toString();
         }
-        report += "-------------------------------------------\n";
+        report += "--\n";
         report += "Food Needed Today:\n";
         report += "  - No Food: " + foodTotals[0] + "\n";
         report += "  - Dry: " + foodTotals[1] + "\n";

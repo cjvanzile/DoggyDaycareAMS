@@ -1,5 +1,8 @@
 import org.junit.jupiter.api.DisplayName;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DoggyDaycareAMSTest {
@@ -7,6 +10,7 @@ class DoggyDaycareAMSTest {
     //create an object to be tested
 
     String filename;
+    Connection conn = null;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
@@ -25,78 +29,78 @@ class DoggyDaycareAMSTest {
 
     @org.junit.jupiter.api.Test
     @DisplayName("Test Add Dog")
-    void addDogTest() {
+    void addDogTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // This is the test dog
         Dog dog = new Dog(1, "Buddy", "Boxer", "2023-05-04", 1, "M", "N", true);
 
         // Test adding a dog
-        assertTrue(manager.addDog(dog), "Couldn't add dog");
+        assertTrue(manager.addDog(dog, conn), "Couldn't add dog");
 
         // Test adding same dog again
-        assertFalse(manager.addDog(dog),"Adding duplicate dog allowed, should have failed.");
+        assertFalse(manager.addDog(dog, conn),"Adding duplicate dog allowed, should have failed.");
     }
 
     @org.junit.jupiter.api.Test
     @DisplayName("Get All Dogs")
-    void getAllDogsTest() {
+    void getAllDogsTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // This is the test dog
         Dog dog = new Dog(1, "Buddy", "Boxer", "2023-05-04", 1, "M", "N", true);
 
         // Test to make sure we can get an empty dog list
-        assertTrue(manager.getAllDogs().isEmpty(), "Couldn't get empty list.");
+        assertTrue(manager.getDogs(false,conn).isEmpty(), "Couldn't get empty list.");
 
         // Add a dog
-        manager.addDog(dog);
+        manager.addDog(dog, conn);
 
         // Test Get All Dogs
-        assertFalse(manager.getAllDogs().isEmpty(), " Get all dogs failed.");
+        assertFalse(manager.getDogs(false, conn).isEmpty(), " Get all dogs failed.");
     }
 
     @org.junit.jupiter.api.Test
     @DisplayName("Test Removing a Dog")
-    void removeDogTest() {
+    void removeDogTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // This is the test dog
         Dog dog = new Dog(1, "Buddy", "Boxer", "2023-05-04", 1, "M", "N", true);
 
         // Add a dog
-        manager.addDog(dog);
+        manager.addDog(dog, conn);
 
         // Attempt to remove non-existent dog
-        assertFalse(manager.removeDog(2), "Did not fail when removing non-existent dog.");
+        assertFalse(manager.removeDog(2, conn) != null, "Did not fail when removing non-existent dog.");
 
         // Attempt to remove existing dog
-        assertTrue(manager.removeDog(1), "Did not remove existing dog.");
+        assertTrue(manager.removeDog(1, conn) != null, "Did not remove existing dog.");
 
         // Make sure dog was deleted
-        assertTrue(manager.getAllDogs().isEmpty(), "Remove dog did not remove the dog from the list.");
+        assertTrue(manager.getDogs(false, conn).isEmpty(), "Remove dog did not remove the dog from the list.");
     }
 
     @org.junit.jupiter.api.Test
     @DisplayName("Test Finding Dog by ID")
-    void FindDogByIDTest() {
+    void FindDogByIDTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // This is the test dog
         Dog dog = new Dog(1, "Buddy", "Boxer", "2023-05-04", 1, "M", "N", true);
 
         // Add a dog
-        manager.addDog(dog);
+        manager.addDog(dog, conn);
 
         // Make sure we can get the dog by ID
-        assertNotNull(manager.findDogById(1),"Couldn't find dog by ID.");
+        assertNotNull(manager.findDogById(1, conn),"Couldn't find dog by ID.");
 
         // Make sure we don't get non-existent dog
-        assertNull(manager.findDogById(2),"Getting non-existent dog did not fail.");
+        assertNull(manager.findDogById(2, conn),"Getting non-existent dog did not fail.");
 
         // Test to ensure retrieved dog is correct
         // Get the dog
-        Dog theDog = manager.findDogById(1);
+        Dog theDog = manager.findDogById(1, conn);
 
         // Ensure the dog was retrieved
         assertEquals(dog, theDog, "Get Dog by ID failed.");
@@ -105,7 +109,7 @@ class DoggyDaycareAMSTest {
 
     @org.junit.jupiter.api.Test
     @DisplayName("Test Update Dog")
-    void updateDogTest() {
+    void updateDogTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // This is the test dog
@@ -115,16 +119,16 @@ class DoggyDaycareAMSTest {
         Dog updatedDog = new Dog(1, "Buddie", "Poodle", "2023-05-05", 0, "F", "Y", false);
 
         // Add a dog
-        manager.addDog(dog);
+        manager.addDog(dog, conn);
 
         // Test updating the dog
-        assertTrue(manager.updateDog(1, updatedDog), "Update dog failed.");
+        assertTrue(manager.updateDog(1, updatedDog, conn), "Update dog failed.");
 
         // Test updating non-existent dog
-        assertFalse(manager.updateDog(2, updatedDog), "Updating non-existent dog did not fail.");
+        assertFalse(manager.updateDog(2, updatedDog, conn), "Updating non-existent dog did not fail.");
 
         // Get the updated dog
-        Dog theDog = manager.findDogById(1);
+        Dog theDog = manager.findDogById(1, conn);
 
         // Ensure the dog was updated
         assertEquals(updatedDog, theDog, "Update dog failed to update the object.");
@@ -175,13 +179,13 @@ class DoggyDaycareAMSTest {
 
     @org.junit.jupiter.api.Test
     @DisplayName("Test Attendance Report")
-    void generateAttendanceReportTest() {
+    void generateAttendanceReportTest() throws SQLException {
         DogManager manager = new DogManager();
 
         // Test to ensure Attendance Report is generated
         // If attendance report fails, an empty string is returned
         // This will never fail
-        assertNotEquals("", manager.generateAttendanceReport(), "Attendance Report failed.");
+        assertNotEquals("", manager.generateAttendanceReport(conn), "Attendance Report failed.");
 
     }
 }

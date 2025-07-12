@@ -4,6 +4,7 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +44,11 @@ public class DaycareUI extends JFrame {
     private JList dogList;
     private JButton btnAddNewDog;
     private JCheckBox chkShowAll;
+    private JButton btnAttendanceReport;
+    private JLabel txtStatus;
+
+    // Connection String for database
+    String dbURL;
 
     private final DogManager manager = new DogManager();
 
@@ -67,7 +73,9 @@ public class DaycareUI extends JFrame {
         cmbSpayNeuter.setSelectedIndex(0);
         btnRemove.setEnabled(false);
         btnCheckIn.setEnabled(false);
+        txtStatus.setText(null);
         btnAdd.setText("Add");
+        lblDogNameHeader.setText("(add dog)");
     }
 
     // Populates dog info form from dog object
@@ -87,31 +95,112 @@ public class DaycareUI extends JFrame {
         btnCheckIn.setEnabled(true);
         // Change check-in button text depending dog is checked in or not
         btnCheckIn.setText(dog.isCheckedIn() ? "Check Out" : "Check In");
+        txtStatus.setText(dog.isCheckedIn() ? "(checked in)" : "(checked out)");
         btnAdd.setText("Update");
     }
 
-    // Populate list with checked-in dogs
-    public void displayCheckedInDogs() {
-        manager.generateAttendanceReport();
-        populateDogList(manager.dogsCheckedIn);
+    // Populate dog list on left side of screen from dog array list object
+    public void populateDogList(Connection conn) throws SQLException {
+
+        ArrayList<Dog> dogListTemp = new ArrayList<>();
+        List<String> dogListArray = new ArrayList<>();
+        String report = null;
+
+        if (chkShowAll.isSelected()) {  // Create an array list of all dogs
+            lblListType.setText("All Dogs");
+            List<Dog> dogs = manager.getDogs(false,conn);
+            for (Dog dog : dogs) {
+                dogListTemp.add(dog);
+            }
+        } else {  // Create an array list of the checked-in dogs (attendance list)
+            lblListType.setText("Attendance Report");
+            report = manager.generateAttendanceReport(conn);
+            dogListTemp = manager.dogsCheckedIn;
+        }
+
+        dogListArray.add("<html>Checked in dogs are displayed in green<br><br></html");
+
+        for (Dog dog: dogListTemp) {
+            String dogDetails = "[" + dog.getId() + "] " + dog.getName() + " (" + dog.getBreed() + ") " + foodTypes[dog.getFood()];
+            if (dog.isCheckedIn()) {  // Display the line in green
+                dogDetails = "<html><font color='#008800'>" + dogDetails + "</font></html>";
+            } else {  // Display the line in red
+                dogDetails = "<html><font color='#880000'>" + dogDetails + "</font></html>";
+            }
+            dogListArray.add(dogDetails);
+        }
+
+        if (!chkShowAll.isSelected()) {
+            String[] reportParts = report.split("--");
+            String summary = "<html><br>"
+                    + reportParts[1]
+                    + "<br>"
+                    + reportParts[3].replace("\n", "<br>")
+                    + "</html>";
+
+            dogListArray.add(summary);
+        }
+
+        dogList.setListData(dogListArray.toArray());
     }
 
-    // Populate dog list on left side of screen from dog array list object
-    public void populateDogList(ArrayList<Dog> dogListArray){
-        List<String> dogListArray1 = new ArrayList<String>();
-        for (Dog dog: dogListArray) {
-            String dogDetails = dog.getId() + ": " + dog.getName() + " (" + dog.getBreed() + ") " + foodTypes[dog.getFood()];
-            // Only show check-in if showing all dogs in the list
-            if (chkShowAll.isSelected() && dog.isCheckedIn()) {
-                dogDetails += " (CHECKED IN)";
+    // Get database from user
+    public void setupDatabase() {
+        Boolean haveDB =  false; // Will be set true when database connection is successful
+        do {
+            String dbFilename = JOptionPane.showInputDialog("Enter Database Name (including full path).\n" +
+                    "If database does not exist, it will be created.","dogs.db");
+
+            if (dbFilename == null) { // User clicked cancel or 'X' in pop-up
+                if( JOptionPane.showConfirmDialog(null, "Are you sure you want to exit?", "Exit", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)
+                    System.exit(0);
+                continue;
             }
-            dogListArray1.add(dogDetails);
-        }
-        dogList.setListData(dogListArray1.toArray());
+
+            if (dbFilename.equals("")) { // User did not enter file name
+                JOptionPane.showMessageDialog(null, "Please enter a file name", "Error", JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+
+            // Create Database connect string
+            dbURL = "jdbc:sqlite:" + dbFilename;
+
+            // Connect to Database
+            try (Connection conn = DriverManager.getConnection(dbURL)) {
+                if (conn == null) {
+                    JOptionPane.showMessageDialog(null, "Error creating database connection.", "Error", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+
+                // Creates "dogs" table if it does not exist
+                String sql = "CREATE TABLE IF NOT EXISTS dogs ("
+                        + "id integer PRIMARY KEY,"
+                        + "name text NOT NULL,"
+                        + "breed text NOT NULL,"
+                        + "dob text NOT NULL,"
+                        + "food integer NOT NULL,"
+                        + "gender text NOT NULL,"
+                        + "spayedneutered text NOT NULL,"
+                        + "checkedin boolean NOT NULL);";
+                Statement stmt = conn.createStatement();
+                stmt.execute(sql);
+
+                // Close Database connection
+                conn.close();
+
+                JOptionPane.showMessageDialog(null, "Database connected.\n\n" +
+                        "Use settings in upper left of main window to import dogs.\n\n");
+
+                haveDB = true;
+            } catch (SQLException e) { // Couldn't connect to Database
+                JOptionPane.showMessageDialog(null, "Error creating database connection.", "Error", JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+        } while (!haveDB);
     }
 
     // Show the form
-    public DaycareUI() {
+    public DaycareUI() throws SQLException {
         setTitle("Doggy Daycare Attendance Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setContentPane(panel1);
@@ -132,25 +221,30 @@ public class DaycareUI extends JFrame {
 
         setVisible(true);
 
+        setupDatabase();
+
+        Connection conn = DriverManager.getConnection(dbURL);
+
+        populateDogList(conn);
+
         // Import button
         btnImport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                List<String> dogListArray = new ArrayList<String>();
                 clearForm();
                 if (txtFileName.getText().equals("")) {
                     JOptionPane.showMessageDialog(null, "Please enter a file name", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
                 try {
-                    int cnt = manager.loadFromFile(txtFileName.getText());
-                    if (cnt > 0) {
-                        displayCheckedInDogs();
-                    } else {
-                        JOptionPane.showMessageDialog(null, "No dogs were added", "Error", JOptionPane.ERROR_MESSAGE);
-                    }
+                    manager.loadFromFile(txtFileName.getText(), conn);
+
+                    populateDogList(conn);
+
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(null, "File import failed", "Error", JOptionPane.ERROR_MESSAGE);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -167,7 +261,12 @@ public class DaycareUI extends JFrame {
                     JOptionPane.showMessageDialog(null, "Enter a valid dog ID", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                Dog currentDog = manager.findDogById(id);
+                Dog currentDog = null;
+                try {
+                    currentDog = manager.findDogById(id, conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
                 String name = txtName.getText().trim();
                 String breed = txtBreed.getText().trim();
                 Object foodObj = cmbFood.getSelectedItem();
@@ -194,19 +293,31 @@ public class DaycareUI extends JFrame {
                 Dog dog = new Dog(id, name, breed, dob, food, gender, spayedNeutered, checkedIn);
                 if (btnAdd.getText().equals("Add")) {
                     // Add new dog
-                    if (manager.addDog(dog))
-                        JOptionPane.showMessageDialog(null, "Dog added successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-                    else
-                        JOptionPane.showMessageDialog(null, "Dog not added", "Error", JOptionPane.ERROR_MESSAGE);
+                    try {
+                        if (manager.addDog(dog, conn))
+                            JOptionPane.showMessageDialog(null, "Dog added successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        else
+                            JOptionPane.showMessageDialog(null, "Dog not added", "Error", JOptionPane.ERROR_MESSAGE);
+                    } catch (SQLException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 } else {
                     // Update existing dog
-                    if (manager.updateDog(id, dog))
-                        JOptionPane.showMessageDialog(null, "Dog updated successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-                    else
-                        JOptionPane.showMessageDialog(null, "Dog not updated", "Error", JOptionPane.ERROR_MESSAGE);
+                    try {
+                        if (manager.updateDog(id, dog, conn))
+                            JOptionPane.showMessageDialog(null, "Dog updated successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        else
+                            JOptionPane.showMessageDialog(null, "Dog not updated", "Error", JOptionPane.ERROR_MESSAGE);
+                    } catch (SQLException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
                 populateForm(dog); // Update form on right with dog
-                displayCheckedInDogs();
+                try {
+                    populateDogList(conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         });
 
@@ -231,22 +342,35 @@ public class DaycareUI extends JFrame {
                     return;
                 }
                 // Get dog info
-                Dog updatedDog = manager.findDogById(id);
+                Dog updatedDog = null;
+                try {
+                    updatedDog = manager.findDogById(id, conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
                 // Invert dog check-in status
                 updatedDog.setCheckedIn(!updatedDog.isCheckedIn());
-                chkShowAll.setSelected(false);
 
-                if (manager.updateDog(id, updatedDog)) {
-                    // Change button text for check-out/in button
-                    if (updatedDog.isCheckedIn()) {
-                        btnCheckIn.setText("Check Out");
+                try {
+                    if (manager.updateDog(id, updatedDog, conn)) {
+                        // Change button text for check-out/in button
+                        if (updatedDog.isCheckedIn()) {
+                            btnCheckIn.setText("Check Out");
+                        } else {
+                            btnCheckIn.setText("Check In");
+                        }
+                        populateForm(updatedDog);
                     } else {
-                        btnCheckIn.setText("Check In");
-                    }
-                    displayCheckedInDogs();
-                } else {
-                    JOptionPane.showMessageDialog(null, "Dog Update Failed. Check all data.", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(null, "Dog Update Failed. Check all data.", "Error", JOptionPane.ERROR_MESSAGE);
 
+                    }
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
+                try {
+                    populateDogList(conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -263,12 +387,18 @@ public class DaycareUI extends JFrame {
                     JOptionPane.showMessageDialog(null, "Enter a valid dog ID", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                if (manager.removeDog(id)) {
-                    clearForm(); // Clear dog info from form
-                    displayCheckedInDogs();
-                    JOptionPane.showMessageDialog(null, "Dog removed.");
-                } else {
-                    JOptionPane.showMessageDialog(null, "Unable to remove dog", "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    Dog removedDog = manager.removeDog(id, conn);
+                    if (removedDog != null) {
+                        clearForm(); // Clear dog info from form
+                        populateDogList(conn);
+                        JOptionPane.showMessageDialog(null,  removedDog.getName()
+                                + " (ID # " + removedDog.getId() + ") has been removed from the database");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Unable to remove dog", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -287,9 +417,16 @@ public class DaycareUI extends JFrame {
             public void valueChanged(ListSelectionEvent e) {
                 if (dogList.getSelectedValue() != null) {
                     String dogInfo = dogList.getSelectedValue().toString();
-                    int id = Integer.parseInt(dogInfo.split(":")[0]);
-                    Dog dog = manager.findDogById(id);
-                    populateForm(dog); // Add selected dog info to form
+                    try {
+                        dogInfo = dogInfo.split("\\[")[1];
+                        dogInfo = dogInfo.split("\\]")[0];
+                        int id = Integer.parseInt(dogInfo);
+                        Dog dog = manager.findDogById(id, conn);
+                        populateForm(dog); // Add selected dog info to form
+                    }
+                    catch (Exception ex) {
+                        // User didn't click on a line starting with an integer (i.e., a dog)
+                    }
                 }
             }
         });
@@ -307,24 +444,28 @@ public class DaycareUI extends JFrame {
         chkShowAll.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // If show-all check box is selected, the list will show all dogs, otherwise just checked-in dogs
-                if (chkShowAll.isSelected()) {
-                    lblListType.setText("Show All");
-                    List<Dog> dogs = manager.getAllDogs();
-                    ArrayList<Dog> allDogs = new ArrayList<>();
-                    for (Dog dog : dogs) {
-                        allDogs.add(dog); // Add dog to checked-in dogs
-                    }
-                    populateDogList(allDogs);
-                } else {
-                    lblListType.setText("Checked In Dogs");
-                    displayCheckedInDogs();
+                try {
+                    populateDogList(conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
+            }
+        });
+        btnAttendanceReport.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String report = null;
+                try {
+                    report = manager.generateAttendanceReport(conn);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
+                JOptionPane.showMessageDialog(null, report, "Attendance Report", JOptionPane.INFORMATION_MESSAGE);
             }
         });
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         new DaycareUI();
     }
 }

@@ -2,6 +2,8 @@
 // Software Development I
 // Module 7 | DMS Project Phase 1: Logic and Input Validation
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Scanner;
 import java.util.List;
 import java.io.File;
@@ -20,16 +22,17 @@ public class DoggyDaycareAMS {
     /*
      * This is where the program starts.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
        DoggyDaycareAMS app = new DoggyDaycareAMS();
-        app.run();
+       Connection conn = null;
+        app.run(conn);
     }
 
     /*
      * This is the main loop for the program.
      * It displays the menu and keeps the program running until the user chooses to exit.
      */
-    public void run() {
+    public void run(Connection conn) throws SQLException {
         System.out.println("Welcome to Doggy Daycare Attendance Management System!");
         boolean running = true; // Controls whether the menu keeps looping
         while (running) {
@@ -41,19 +44,19 @@ public class DoggyDaycareAMS {
                 handleLoadFile();
             } else if (choice == 2) {
                 // User wants to display all dogs currently in the system
-                handleDisplayDogs();
+                handleDisplayDogs(conn);
             } else if (choice == 3) {
                 // User wants to add a new dog record
-                handleAddDog();
+                handleAddDog(conn);
             } else if (choice == 4) {
                 // User wants to update an existing dog's information
-                handleUpdateDog();
+                handleUpdateDog(conn);
             } else if (choice == 5) {
                 // User wants to remove a dog by ID
-                handleRemoveDog();
+                handleRemoveDog(conn);
             } else if (choice == 6) {
                 // User wants to see the custom attendance report
-                handleAttendanceReport();
+                handleAttendanceReport(conn);
             } else if (choice == 7) {
                 // User wants to exit the program
                 System.out.println("Exiting program. Goodbye!");
@@ -99,14 +102,15 @@ public class DoggyDaycareAMS {
         if (!file.exists() || !file.isFile()) {
             return false;
         }
-        try {
-            int added = manager.loadFromFile(filename); // Try to load records
-            System.out.println("Loaded " + added + " dog records from file.");
+        /*try {
+            //int added = manager.loadFromFile(filename); // Try to load records
+            //System.out.println("Loaded " + added + " dog records from file.");
             return true;
         } catch (IOException e) {
             // Something went wrong while reading
             return false;
-        }
+        }*/
+        return false;
     }
 
 
@@ -115,8 +119,8 @@ public class DoggyDaycareAMS {
      * Prints all dogs currently in the system.
      * This helps the user verify records after any change.
      */
-    private void handleDisplayDogs() {
-        List<Dog> dogs = manager.getAllDogs();
+    private void handleDisplayDogs(Connection conn) throws SQLException {
+        List<Dog> dogs = manager.getDogs(false, conn);
         if (dogs.isEmpty()) {
             System.out.println("No dogs in the system.");
         } else {
@@ -132,14 +136,14 @@ public class DoggyDaycareAMS {
      * Allows the user to add a new dog with step-by-step input validation.
      * Each field is validated so the user can't crash the program.
      */
-    private void handleAddDog() {
+    private void handleAddDog(Connection conn) throws SQLException {
         System.out.println("Enter new dog information:");
 
         // Loop until the user enters a unique integer for ID
         int id;
         while (true) {
             id = getIntInput("ID (integer, unique): ");
-            if (manager.findDogById(id) != null) {
+            if (manager.findDogById(id, conn) != null) {
                 System.out.println("ID already exists. Please enter a different ID.");
             } else {
                 break;
@@ -190,22 +194,22 @@ public class DoggyDaycareAMS {
 
         // Now create the Dog object and add it to the system
         Dog newDog = new Dog(id, name, breed, dob, food, gender, spayedNeutered, checkedIn);
-        if (manager.addDog(newDog)) {
+        if (manager.addDog(newDog, conn)) {
             System.out.println("Dog added successfully.");
         } else {
             System.out.println("Failed to add dog.");
         }
         // After adding, print all dogs to show the update
-        handleDisplayDogs();
+        handleDisplayDogs(conn);
     }
 
     /*
      * Lets the user update any field of an existing dog.
      * For each field, user can press Enter to keep the old value.
      */
-    private void handleUpdateDog() {
+    private void handleUpdateDog(Connection conn) throws SQLException {
         int id = getIntInput("Enter ID of dog to update: ");
-        Dog dog = manager.findDogById(id);
+        Dog dog = manager.findDogById(id, conn);
         if (dog == null) {
             System.out.println("Dog with that ID does not exist.");
             return;
@@ -275,36 +279,36 @@ public class DoggyDaycareAMS {
 
         // Make a new Dog object with updated info, and update it in the manager
         Dog updatedDog = new Dog(id, name, breed, dob, food, gender, spayedNeutered, checkedIn);
-        if (manager.updateDog(id, updatedDog)) {
+        if (manager.updateDog(id, updatedDog, conn)) {
             System.out.println("Dog updated.");
         } else {
             System.out.println("Failed to update dog.");
         }
         // Show all dogs to prove the update worked
-        handleDisplayDogs();
+        handleDisplayDogs(conn);
     }
 
     /*
      * Lets the user remove a dog from the system by ID.
      * If the dog is not found, informs the user.
      */
-    private void handleRemoveDog() {
+    private void handleRemoveDog(Connection conn) throws SQLException {
         int id = getIntInput("Enter ID of dog to remove: ");
-        if (manager.removeDog(id)) {
+        if (manager.removeDog(id, conn) != null) {
             System.out.println("Dog removed.");
         } else {
             System.out.println("No dog found with that ID.");
         }
         // Always show updated list afterwards
-        handleDisplayDogs();
+        handleDisplayDogs(conn);
     }
 
     /*
      * Calls the custom action: show an attendance and food report.
      * This is not a CRUD operation, but it gives business insight.
      */
-    private void handleAttendanceReport() {
-        String report = manager.generateAttendanceReport();
+    private void handleAttendanceReport(Connection conn) throws SQLException {
+        String report = manager.generateAttendanceReport(conn);
         System.out.println(report);
     }
 
