@@ -52,7 +52,7 @@ This program demonstrates using a console-based menu to manage dog records for a
 ## Phase 4 - Database Demonstration Instructions
 
 1. Place "phase4.jar" and "dogs.txt" files in the same directory.
-2. Change to directory containing jar and txt files.
+2. In the Command Window, change to the directory containing the jar and txt files.
 3. Type "java -jar phase4.jar" to run the program.
 4. Leaving "dogs.db" in the database file text box, will create the database in the same directory.
 5. Clicking on the "Import Data" button in the upper left will import the "dogs.txt" file into the database.
