@@ -99,7 +99,7 @@ public class DaycareUI extends JFrame {
         btnAdd.setText("Update");
     }
 
-    // Populate dog list on left side of screen from dog array list object
+    // Populate dog list on left side of screen from database
     public void populateDogList(Connection conn) throws SQLException {
 
         ArrayList<Dog> dogListTemp = new ArrayList<>();
@@ -108,18 +108,21 @@ public class DaycareUI extends JFrame {
 
         if (chkShowAll.isSelected()) {  // Create an array list of all dogs
             lblListType.setText("All Dogs");
-            List<Dog> dogs = manager.getDogs(false,conn);
-            for (Dog dog : dogs) {
-                dogListTemp.add(dog);
-            }
         } else {  // Create an array list of the checked-in dogs (attendance list)
             lblListType.setText("Attendance Report");
             report = manager.generateAttendanceReport(conn);
-            dogListTemp = manager.dogsCheckedIn;
+        }
+
+        // Get dog list from database, if checkShowAll is checked, include all dogs
+        List<Dog> dogs = manager.getDogs(!chkShowAll.isSelected(),conn);
+
+        for (Dog dog : dogs) {
+            dogListTemp.add(dog);
         }
 
         dogListArray.add("<html>Checked in dogs are displayed in green<br><br></html");
 
+        // Make display list colorful
         for (Dog dog: dogListTemp) {
             String dogDetails = "[" + dog.getId() + "] " + dog.getName() + " (" + dog.getBreed() + ") " + foodTypes[dog.getFood()];
             if (dog.isCheckedIn()) {  // Display the line in green
@@ -133,14 +136,15 @@ public class DaycareUI extends JFrame {
         if (!chkShowAll.isSelected()) {
             String[] reportParts = report.split("--");
             String summary = "<html><br>"
-                    + reportParts[1]
+                    + reportParts[1] // Number of dogs checked-in
                     + "<br>"
-                    + reportParts[3].replace("\n", "<br>")
+                    + reportParts[3].replace("\n", "<br>") // Food preference counts
                     + "</html>";
 
             dogListArray.add(summary);
         }
 
+        // Display list on left side of window
         dogList.setListData(dogListArray.toArray());
     }
 
@@ -194,7 +198,7 @@ public class DaycareUI extends JFrame {
                 haveDB = true;
             } catch (SQLException e) { // Couldn't connect to Database
                 JOptionPane.showMessageDialog(null, "Error creating database connection.", "Error", JOptionPane.ERROR_MESSAGE);
-                continue;
+                return;
             }
         } while (!haveDB);
     }
@@ -223,6 +227,7 @@ public class DaycareUI extends JFrame {
 
         setupDatabase();
 
+        // Connection "conn" will be passed into multiple methods
         Connection conn = DriverManager.getConnection(dbURL);
 
         populateDogList(conn);
@@ -242,9 +247,11 @@ public class DaycareUI extends JFrame {
                     populateDogList(conn);
 
                 } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(null, "File import failed", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "Error loading file", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Error loading file", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         });
@@ -265,7 +272,8 @@ public class DaycareUI extends JFrame {
                 try {
                     currentDog = manager.findDogById(id, conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to add dog", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
                 String name = txtName.getText().trim();
                 String breed = txtBreed.getText().trim();
@@ -296,27 +304,34 @@ public class DaycareUI extends JFrame {
                     try {
                         if (manager.addDog(dog, conn))
                             JOptionPane.showMessageDialog(null, "Dog added successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-                        else
+                        else {
                             JOptionPane.showMessageDialog(null, "Dog not added", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                        }
                     } catch (SQLException ex) {
-                        throw new RuntimeException(ex);
+                        JOptionPane.showMessageDialog(null, "Unable to add dog", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 } else {
                     // Update existing dog
                     try {
                         if (manager.updateDog(id, dog, conn))
                             JOptionPane.showMessageDialog(null, "Dog updated successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-                        else
+                        else {
                             JOptionPane.showMessageDialog(null, "Dog not updated", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
                     } catch (SQLException ex) {
-                        throw new RuntimeException(ex);
+                        JOptionPane.showMessageDialog(null, "Unable to update dog", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 }
                 populateForm(dog); // Update form on right with dog
                 try {
                     populateDogList(conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to populate dog list", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         });
@@ -346,7 +361,8 @@ public class DaycareUI extends JFrame {
                 try {
                     updatedDog = manager.findDogById(id, conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to check dog in", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
                 // Invert dog check-in status
                 updatedDog.setCheckedIn(!updatedDog.isCheckedIn());
@@ -361,16 +377,18 @@ public class DaycareUI extends JFrame {
                         }
                         populateForm(updatedDog);
                     } else {
-                        JOptionPane.showMessageDialog(null, "Dog Update Failed. Check all data.", "Error", JOptionPane.ERROR_MESSAGE);
-
+                        JOptionPane.showMessageDialog(null, "Unable to check dog in/out.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to check dog in/out.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
                 try {
                     populateDogList(conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to check dog in/out.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         });
@@ -396,9 +414,11 @@ public class DaycareUI extends JFrame {
                                 + " (ID # " + removedDog.getId() + ") has been removed from the database");
                     } else {
                         JOptionPane.showMessageDialog(null, "Unable to remove dog", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to remove dog", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         });
@@ -418,6 +438,7 @@ public class DaycareUI extends JFrame {
                 if (dogList.getSelectedValue() != null) {
                     String dogInfo = dogList.getSelectedValue().toString();
                     try {
+                        // Extract dogID from []
                         dogInfo = dogInfo.split("\\[")[1];
                         dogInfo = dogInfo.split("\\]")[0];
                         int id = Integer.parseInt(dogInfo);
@@ -445,9 +466,11 @@ public class DaycareUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
+                    // Repopulate dogList based on current check box state
                     populateDogList(conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to update dog list.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         });
@@ -458,7 +481,8 @@ public class DaycareUI extends JFrame {
                 try {
                     report = manager.generateAttendanceReport(conn);
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    JOptionPane.showMessageDialog(null, "Unable to display detailed attendance report.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
                 JOptionPane.showMessageDialog(null, report, "Attendance Report", JOptionPane.INFORMATION_MESSAGE);
             }
