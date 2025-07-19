@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
-/*
+/**
  * DogManager class: stores all dogs and provides core system features.
  * This class lets us add, find, update, remove, and report on dog records.
  */
@@ -17,16 +17,24 @@ public class DogManager {
     // List to hold all Dog objects in memory for the current session
     private ArrayList<Dog> dogs;
 
-    // List to hold all Dog objects checked-in in memory for the current session
+    /**
+     * This holds the dogs that are currently checked in.
+     */
     public ArrayList<Dog> dogsCheckedIn;
 
     // Info for attendance report
     int checkedInCount = 0;
-    int[] foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
+    /**
+     * This array counts the type of dog food for checked in dogs.
+     */
+    // Create food types Array
+    String[] foodTypes = {"No Food", "Dry Food", "Wet Food", "Customer Provided"};
+    int[] foodTotals = new int[foodTypes.length]; // Food totals based on food types above.
+
     StringBuilder checkedInList = new StringBuilder();
 
-    /*
-     * Constructor: starts with an empty list of dogs.
+    /**
+     * Constructor: starts with an empty list of all dogs and dogs checked in.
      * We always use the same DogManager throughout the program.
      */
     public DogManager() {
@@ -35,8 +43,16 @@ public class DogManager {
     }
 
     /*
-     * Adds a new dog record if the ID doesn't exist yet.
+     *
      * Returns true if successful; false if the ID was a duplicate.
+     */
+
+    /**
+     * Adds a new dog record if the ID doesn't exist yet.
+     * @param dog This is a dog object, containing all the dog's attributes.
+     * @param conn This is the active database connection.
+     * @return True if the dog is added, otherwise false.
+     * @throws SQLException Exceptions are handled by returning false.
      */
     public boolean addDog(Dog dog, Connection conn) throws SQLException {
         if (findDogById(dog.getId(), conn) != null) {
@@ -67,9 +83,12 @@ public class DogManager {
         return  true;
     }
 
-    /*
-     * Lets other classes see all the current dog records.
-     * This is read-only; you can't change the list directly from outside.
+    /**
+     * Get dogs from the database based on the checked in status passed in as a parameter.
+     * @param checkedIn If true, return only checked in dogs, otherwise all dogs.
+     * @param conn This is the active database connection.
+     * @return Returns a list of dog objects.
+     * @throws SQLException Exceptions are handled by returning null.
      */
     public List<Dog> getDogs(Boolean checkedIn, Connection conn) throws SQLException {
         List<Dog> allDogs = new ArrayList<>();
@@ -77,26 +96,32 @@ public class DogManager {
         String sqlSelect = "SELECT * FROM dogs" + (checkedIn ? " WHERE checkedin = true" : "")
                 + " ORDER BY name ASC";
         Statement stmtSelect = conn.createStatement();
-        ResultSet rs = stmtSelect.executeQuery(sqlSelect);
-        while (rs.next()) {
-            Dog dog = new Dog(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("breed"),
-                    rs.getString("dob"),
-                    rs.getInt("food"),
-                    rs.getString("gender"),
-                    rs.getString("spayedneutered"),
-                    rs.getBoolean("checkedin")
-            );
-            allDogs.add(dog);
+        try (ResultSet rs = stmtSelect.executeQuery(sqlSelect)) {
+            while (rs.next()) {
+                Dog dog = new Dog(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("breed"),
+                        rs.getString("dob"),
+                        rs.getInt("food"),
+                        rs.getString("gender"),
+                        rs.getString("spayedneutered"),
+                        rs.getBoolean("checkedin")
+                );
+                allDogs.add(dog);
+            }
+        } catch (SQLException ex) {
+            return null;
         }
         return allDogs;
     }
 
-    /*
+    /**
      * Removes a dog by their unique ID.
-     * Returns true if the dog was found and removed; false otherwise.
+     * @param id The ID of the dog to be removed.
+     * @param conn This is the active database connection.
+     * @return Returns a dog object for the removed dog, or null if the dog was not found.
+     * @throws SQLException Exceptions are handled by returning null.
      */
     public Dog removeDog(int id,  Connection conn) throws SQLException {
         Dog dog = findDogById(id, conn);
@@ -118,9 +143,13 @@ public class DogManager {
         return dog;
     }
 
-    /*
+    /**
      * Updates the entire dog record for a specific ID.
-     * Returns true if successful, false if the ID was not found.
+     * @param id The ID of the dog to be updated.
+     * @param updatedDog An object of type Dog of the dog to be updated.
+     * @param conn This is the active database connection.
+     * @return Returns true if the dog is updated, otherwise false.
+     * @throws SQLException Exceptions are handled by returning false.
      */
     public boolean updateDog(int id, Dog updatedDog, Connection conn) throws SQLException {
         if (findDogById(id, conn) == null) {
@@ -158,37 +187,46 @@ public class DogManager {
         return  true;
     }
 
-    /*
-     * Searches for a dog by ID.
-     * Returns the Dog object if found, or null if not found.
+    /**
+     * Finds a dog by a specific ID.
+     * @param id The ID of the dog to be selected from the database.
+     * @param conn This is the active database connection.
+     * @return Returns the Dog object if found, or null if not found.
+     * @throws SQLException Exceptions are handled by returning null.
      */
     public Dog findDogById(int id, Connection conn) throws SQLException {
         String sqlSelect = "SELECT * FROM dogs WHERE ID = ?";
         PreparedStatement stmtSelect = conn.prepareStatement(sqlSelect);
         stmtSelect.setInt(1, id);
-        ResultSet rs = stmtSelect.executeQuery();
-        if (rs.next()) {
-            Dog dog = new Dog(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("breed"),
-                    rs.getString("dob"),
-                    rs.getInt("food"),
-                    rs.getString("gender"),
-                    rs.getString("spayedneutered"),
-                    rs.getBoolean("checkedin")
-            );
-            return dog;
-        } else {
+        try (ResultSet rs = stmtSelect.executeQuery()) {
+            if (rs.next()) {
+                Dog dog = new Dog(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("breed"),
+                        rs.getString("dob"),
+                        rs.getInt("food"),
+                        rs.getString("gender"),
+                        rs.getString("spayedneutered"),
+                        rs.getBoolean("checkedin")
+                );
+                return dog;
+            } else {
+                return null;
+            }
+        } catch (SQLException ex) {
             return null;
         }
     }
 
-    /*
+    /**
      * Loads dog records from a comma-separated text file.
      * Each line should have: id,name,breed,dob,food,gender,spayedNeutered,checkedIn
      * Adds only new records (no duplicates). Skips malformed lines.
-     * Returns the number of records successfully added.
+     * @param filename The name of the file containing dog data.
+     * @param conn This is the active database connection.
+     * @throws IOException Errors in file are skipped.
+     * @throws SQLException Handled in "addDog" method.
      */
     public void loadFromFile(String filename, Connection conn) throws IOException, SQLException {
         BufferedReader br = new BufferedReader(new FileReader(filename));
@@ -232,14 +270,16 @@ public class DogManager {
             + "failed to load " + cntFail + " dogs.");
     }
 
-    /*
-     * Custom action: creates a report of checked-in dogs and food types needed.
-     * Now also lists each checked-in dog's info in detail.
+    /**
+     * Custom action: creates a report of checked-in dogs, food types needed, and each checked-in dog's info in detail.
+     * @param conn This is the active database connection.
+     * @return Returns a formatted String of the attendance report.
+     * @throws SQLException Handled in "getDogs" method.
      */
     public String generateAttendanceReport(Connection conn) throws SQLException {
         dogsCheckedIn = new ArrayList<>(); // Clear out checked-in list
         checkedInCount = 0;
-        foodTotals = new int[4]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
+        foodTotals = new int[foodTypes.length]; // Index: 0=no food, 1=dry, 2=wet, 3=customer provided
         checkedInList = new StringBuilder();
 
         List<Dog> dogs = getDogs(true, conn);
@@ -248,7 +288,7 @@ public class DogManager {
         for (Dog dog : dogs) {
             checkedInCount++;
             int food = dog.getFood();
-            if (food >= 0 && food <= 3) {
+            if (food >= 0 && food < foodTypes.length) {
                 foodTotals[food]++;
             }
             checkedInList.append(dog).append("\n"); // Use Dog's toString() to show all info
@@ -269,17 +309,18 @@ public class DogManager {
         }
         report += "--\n";
         report += "Food Needed Today:\n";
-        report += "  - No Food: " + foodTotals[0] + "\n";
-        report += "  - Dry: " + foodTotals[1] + "\n";
-        report += "  - Wet: " + foodTotals[2] + "\n";
-        report += "  - Customer Provided: " + foodTotals[3] + "\n";
+        for (int i = 0; i < foodTypes.length; i++) {
+            report += "  - " + foodTypes[i] + ": " + foodTotals[i] + "\n";
+        }
         return report;
     }
 
     // ---- Input validation helper methods ----
 
-    /*
+    /**
      * Validates that the dog's birth date is in YYYY-MM-DD format and not in the future.
+     * @param dob A string in the format of "YYYY-MM-DD".
+     * @return Returns true if the date is valid and not in the future, otherwise false.
      */
     public static boolean isValidDob(String dob) {
         try {
@@ -295,15 +336,19 @@ public class DogManager {
         }
     }
 
-    /*
+    /**
      * Checks if gender is valid ("M" or "F").
+     * @param gender A string in the format of "M" or "F".
+     * @return Returns true if valid, otherwise false.
      */
     public static boolean isValidGender(String gender) {
         return gender.equalsIgnoreCase("M") || gender.equalsIgnoreCase("F");
     }
 
-    /*
+    /**
      * Checks if spayedNeutered field is valid ("U", "Y", or "N").
+     * @param sn A string in the format of "U", "Y", or "N".
+     * @return Returns true if valid, otherwise false.
      */
     public static boolean isValidSpayedNeutered(String sn) {
         return sn.equalsIgnoreCase("U") || sn.equalsIgnoreCase("Y") || sn.equalsIgnoreCase("N");

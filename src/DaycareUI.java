@@ -8,6 +8,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DaycareUI extends JFrame.
+ */
 public class DaycareUI extends JFrame {
     private JPanel panel1;
     private JPanel mainTop;
@@ -52,14 +55,13 @@ public class DaycareUI extends JFrame {
 
     private final DogManager manager = new DogManager();
 
-    // Create food types Array
-    String[] foodTypes = {"No Food", "Dry Food", "Wet Food", "Customer Provided"};
-
     private void createUIComponents() {
         // TODO: place custom component creation code here
     }
 
-    // Clears out dog info form
+    /**
+     * Clears the form on the right side of the window.
+     */
     public void clearForm(){
         chkShowAll.setSelected(false);
         lblDogNameHeader.setText(null);
@@ -78,7 +80,10 @@ public class DaycareUI extends JFrame {
         lblDogNameHeader.setText("(add dog)");
     }
 
-    // Populates dog info form from dog object
+    /**
+     * Populates the form on the right side of the window with dog object.
+     * @param dog The dog to display.
+     */
     public void populateForm(Dog dog) {
         lblDogNameHeader.setText(dog.getName());
         txtDogID.setText(Integer.toString(dog.getId()));
@@ -99,7 +104,12 @@ public class DaycareUI extends JFrame {
         btnAdd.setText("Update");
     }
 
-    // Populate dog list on left side of screen from database
+    /**
+     * Populate dog list on left side of window from database.
+     * Uses chkShowAll to display either checked-in or all dogs.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exception is handled by other methods.
+     */
     public void populateDogList(Connection conn) throws SQLException {
 
         ArrayList<Dog> dogListTemp = new ArrayList<>();
@@ -124,7 +134,7 @@ public class DaycareUI extends JFrame {
 
         // Make display list colorful
         for (Dog dog: dogListTemp) {
-            String dogDetails = "[" + dog.getId() + "] " + dog.getName() + " (" + dog.getBreed() + ") " + foodTypes[dog.getFood()];
+            String dogDetails = "[" + dog.getId() + "] " + dog.getName() + " (" + dog.getBreed() + ") " + manager.foodTypes[dog.getFood()];
             if (dog.isCheckedIn()) {  // Display the line in green
                 dogDetails = "<html><font color='#008800'>" + dogDetails + "</font></html>";
             } else {  // Display the line in red
@@ -148,7 +158,12 @@ public class DaycareUI extends JFrame {
         dogList.setListData(dogListArray.toArray());
     }
 
-    // Get database from user
+    /**
+     * Get database from user.
+     * Ask user for database name and attempt a connection.
+     * If a database does not exist, it will be created and the dog table will be added.
+     * If database exists, we will just use it.
+     */
     public void setupDatabase() {
         Boolean haveDB =  false; // Will be set true when database connection is successful
         do {
@@ -203,7 +218,11 @@ public class DaycareUI extends JFrame {
         } while (!haveDB);
     }
 
-    // Show the form
+    /**
+     * Shows the main program window.
+     * Sets up action listeners for all buttons in the window, and in the dog list.
+     * @throws SQLException
+     */
     public DaycareUI() throws SQLException {
         setTitle("Doggy Daycare Attendance Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -214,7 +233,7 @@ public class DaycareUI extends JFrame {
         // Add food to combo box
         cmbFood.addItem(new ComboItem("(select one)", "-1"));
         int cnt = 0;
-        for(String food : foodTypes) {
+        for(String food : manager.foodTypes) {
             cmbFood.addItem(new ComboItem(food,Integer.toString(cnt++)));
         }
 
@@ -474,6 +493,7 @@ public class DaycareUI extends JFrame {
                 }
             }
         });
+
         btnAttendanceReport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -489,6 +509,11 @@ public class DaycareUI extends JFrame {
         });
     }
 
+    /**
+     * This is the main method.
+     * @param args Unused.
+     * @throws SQLException Exceptions are handled respective methods.
+     */
     public static void main(String[] args) throws SQLException {
         new DaycareUI();
     }

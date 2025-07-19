@@ -1,4 +1,4 @@
-/*
+/**
  * Dog class: represents a single dog's record in the system.
  * Each Dog object holds all the required information about a daycare guest.
  */
@@ -20,9 +20,18 @@ public class Dog {
     // Whether the dog is currently checked in at the daycare
     private boolean checkedIn;
 
-    /*
+    /**
+     * Each Dog object holds all the required information about a daycare guest.
      * This constructor sets all fields at once.
      * We require all information to create a Dog record.
+     * @param id int - The dog's unique ID number (used for lookups and updates)
+     * @param name String - The dog's name
+     * @param breed String - The breed of the dog
+     * @param dob String - Date of birth in YYYY-MM-DD format; used for validation and age calculation
+     * @param food int - Integer code for food type: 0=no food, 1=dry, 2=wet, 3=customer provided
+     * @param gender String - The dog's gender ("M" or "F")
+     * @param spayedNeutered String - Spayed/Neutered status: "U" (unknown), "Y" (yes), "N" (no)
+     * @param checkedIn boolean - Whether the dog is currently checked in at the daycare
      */
     public Dog(int id, String name, String breed, String dob, int food, String gender, String spayedNeutered, boolean checkedIn) {
         this.id = id;
@@ -54,9 +63,10 @@ public class Dog {
     public void setSpayedNeutered(String spayedNeutered) { this.spayedNeutered = spayedNeutered; }
     public void setCheckedIn(boolean checkedIn) { this.checkedIn = checkedIn; }
 
-    /*
+    /**
      * Converts this dog's record to a readable string.
      * This is used every time we print a dog, to make sure the info is clear.
+     * @return Returns a String containing the dog's information
      */
     public String toString() {
         // Choose a readable word for food code

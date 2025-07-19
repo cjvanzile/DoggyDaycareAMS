@@ -7,10 +7,9 @@ import java.sql.SQLException;
 import java.util.Scanner;
 import java.util.List;
 import java.io.File;
-import java.io.IOException;
 
-/*
- * Main application class.
+/**
+ * This is the main application class for the CLI version of the program.
  * This is the entry point of the program and handles all menu logic and user interaction.
  */
 public class DoggyDaycareAMS {
@@ -19,8 +18,10 @@ public class DoggyDaycareAMS {
     // Scanner is used to read user input from the command line
     private final Scanner scanner = new Scanner(System.in);
 
-    /*
-     * This is where the program starts.
+    /**
+     * This is the main method CLI version.
+     * @param args Unused
+     * @throws SQLException Exceptions handled by respective methods.
      */
     public static void main(String[] args) throws SQLException {
        DoggyDaycareAMS app = new DoggyDaycareAMS();
@@ -28,9 +29,11 @@ public class DoggyDaycareAMS {
         app.run(conn);
     }
 
-    /*
+    /**
      * This is the main loop for the program.
      * It displays the menu and keeps the program running until the user chooses to exit.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     public void run(Connection conn) throws SQLException {
         System.out.println("Welcome to Doggy Daycare Attendance Management System!");
@@ -68,7 +71,7 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
+    /**
      * Prints the main menu options to the console.
      * Called at the start of every loop so the user always knows their choices.
      */
@@ -84,7 +87,7 @@ public class DoggyDaycareAMS {
         System.out.println("------------------");
     }
 
-    /*
+    /**
      * Handles loading dog data from a text file.
      * Explains the result to the user.
      */
@@ -96,28 +99,25 @@ public class DoggyDaycareAMS {
         }
     }
 
+    /**
+     * Checks to see if the file exists.
+     * @param filename The file name.
+     * @return Returns true if the file exists, otherwise false.
+     */
     public boolean loadFile (String filename) {
         File file = new File(filename);
         // Check that file actually exists before trying to read
         if (!file.exists() || !file.isFile()) {
             return false;
         }
-        /*try {
-            //int added = manager.loadFromFile(filename); // Try to load records
-            //System.out.println("Loaded " + added + " dog records from file.");
-            return true;
-        } catch (IOException e) {
-            // Something went wrong while reading
-            return false;
-        }*/
         return false;
     }
 
-
-
-    /*
+    /**
      * Prints all dogs currently in the system.
      * This helps the user verify records after any change.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     private void handleDisplayDogs(Connection conn) throws SQLException {
         List<Dog> dogs = manager.getDogs(false, conn);
@@ -132,9 +132,11 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
+    /**
      * Allows the user to add a new dog with step-by-step input validation.
      * Each field is validated so the user can't crash the program.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     private void handleAddDog(Connection conn) throws SQLException {
         System.out.println("Enter new dog information:");
@@ -143,6 +145,7 @@ public class DoggyDaycareAMS {
         int id;
         while (true) {
             id = getIntInput("ID (integer, unique): ");
+
             if (manager.findDogById(id, conn) != null) {
                 System.out.println("ID already exists. Please enter a different ID.");
             } else {
@@ -162,6 +165,8 @@ public class DoggyDaycareAMS {
                 break;
             }
         }
+
+        // Get food type from user.
         int food;
         while (true) {
             food = getIntInput("Food type (0=no food, 1=dry, 2=wet, 3=customer provided): ");
@@ -171,6 +176,8 @@ public class DoggyDaycareAMS {
                 break;
             }
         }
+
+        // Get gender from user.
         String gender;
         while (true) {
             gender = getNonEmptyString("Gender (M/F): ").toUpperCase();
@@ -180,6 +187,8 @@ public class DoggyDaycareAMS {
                 break;
             }
         }
+
+        // Get spayed/neutered from user.
         String spayedNeutered;
         while (true) {
             spayedNeutered = getNonEmptyString("Spayed/Neutered (U=unknown, Y=yes, N=no): ").toUpperCase();
@@ -189,6 +198,7 @@ public class DoggyDaycareAMS {
                 break;
             }
         }
+
         // For checked-in status, prompt for true/false
         boolean checkedIn = getBooleanInput("Checked in? (true/false): ");
 
@@ -199,15 +209,19 @@ public class DoggyDaycareAMS {
         } else {
             System.out.println("Failed to add dog.");
         }
+
         // After adding, print all dogs to show the update
         handleDisplayDogs(conn);
     }
 
-    /*
+    /**
      * Lets the user update any field of an existing dog.
      * For each field, user can press Enter to keep the old value.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     private void handleUpdateDog(Connection conn) throws SQLException {
+        // Get dog ID.
         int id = getIntInput("Enter ID of dog to update: ");
         Dog dog = manager.findDogById(id, conn);
         if (dog == null) {
@@ -219,6 +233,8 @@ public class DoggyDaycareAMS {
         // For each field, if the user leaves it blank, keep the old value
         String name = getUpdateString("Name", dog.getName());
         String breed = getUpdateString("Breed", dog.getBreed());
+
+        // Get date of birth.
         String dob;
         while (true) {
             String input = getUpdateString("DOB (YYYY-MM-DD)", dog.getDob());
@@ -229,6 +245,8 @@ public class DoggyDaycareAMS {
                 System.out.println("Invalid DOB.");
             }
         }
+
+        // Get food type.
         int food;
         while (true) {
             String input = getUpdateString("Food type (0=no food, 1=dry, 2=wet, 3=customer provided)", Integer.toString(dog.getFood()));
@@ -249,6 +267,8 @@ public class DoggyDaycareAMS {
                 }
             }
         }
+
+        // Get gender.
         String gender;
         while (true) {
             String input = getUpdateString("Gender (M/F)", dog.getGender()).toUpperCase();
@@ -262,6 +282,8 @@ public class DoggyDaycareAMS {
                 System.out.println("Gender must be M or F.");
             }
         }
+
+        // Get spayed/neutered status.
         String spayedNeutered;
         while (true) {
             String input = getUpdateString("Spayed/Neutered (U=unknown, Y=yes, N=no)", dog.getSpayedNeutered()).toUpperCase();
@@ -275,6 +297,8 @@ public class DoggyDaycareAMS {
                 System.out.println("Enter U, Y, or N.");
             }
         }
+
+        // Get check in status.
         boolean checkedIn = getBooleanInput("Checked in? (true/false): ", dog.isCheckedIn());
 
         // Make a new Dog object with updated info, and update it in the manager
@@ -284,13 +308,16 @@ public class DoggyDaycareAMS {
         } else {
             System.out.println("Failed to update dog.");
         }
+
         // Show all dogs to prove the update worked
         handleDisplayDogs(conn);
     }
 
-    /*
+    /**
      * Lets the user remove a dog from the system by ID.
      * If the dog is not found, informs the user.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     private void handleRemoveDog(Connection conn) throws SQLException {
         int id = getIntInput("Enter ID of dog to remove: ");
@@ -303,9 +330,11 @@ public class DoggyDaycareAMS {
         handleDisplayDogs(conn);
     }
 
-    /*
+    /**
      * Calls the custom action: show an attendance and food report.
      * This is not a CRUD operation, but it gives business insight.
+     * @param conn This is the active database connection.
+     * @throws SQLException Exceptions handled by respective methods.
      */
     private void handleAttendanceReport(Connection conn) throws SQLException {
         String report = manager.generateAttendanceReport(conn);
@@ -314,9 +343,11 @@ public class DoggyDaycareAMS {
 
     // ----- Helper input methods -----
 
-    /*
+    /**
      * Repeatedly asks the user for input until they enter a non-empty string.
      * This prevents blank fields.
+     * @param prompt The string asking the user what to input.
+     * @return The users non-empty response.
      */
     private String getNonEmptyString(String prompt) {
         while (true) {
@@ -329,8 +360,10 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
+    /**
      * Asks the user for an integer until a valid integer is typed.
+     * @param prompt The string asking the user what to input.
+     * @return The users non-empty response.
      */
     private int getIntInput(String prompt) {
         while (true) {
@@ -345,8 +378,10 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
+    /**
      * Asks the user for true/false until the input is understood.
+     * @param prompt The string asking the user what to input.
+     * @return The users Boolean response.
      */
     private boolean getBooleanInput(String prompt) {
         while (true) {
@@ -362,8 +397,11 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
-     * Used for updating. If the user presses enter, keeps the current value.
+    /**
+     * Used for updating Boolean values. If the user presses enter, keeps the current value.
+     * @param prompt The string asking the user what to input.
+     * @param currentValue This is the current Boolean value.
+     * @return The current value (if unchanged) or the new value.
      */
     private boolean getBooleanInput(String prompt, boolean currentValue) {
         System.out.print(prompt + " (current: " + currentValue + "): ");
@@ -380,11 +418,14 @@ public class DoggyDaycareAMS {
         }
     }
 
-    /*
-     * For updating fields, lets user keep old value by pressing Enter.
+    /**
+     * Used for updating Boolean values. If the user presses enter, keeps the current value.
+     * @param prompt The string asking the user what to input.
+     * @param currentValue This is the current string value.
+     * @return The current value (if unchanged) or the new value.
      */
-    private String getUpdateString(String field, String currentValue) {
-        System.out.print(field + " (current: " + currentValue + "): ");
+    private String getUpdateString(String prompt, String currentValue) {
+        System.out.print(prompt + " (current: " + currentValue + "): ");
         String input = scanner.nextLine().trim();
         if (input.isEmpty()) {
             return currentValue;
