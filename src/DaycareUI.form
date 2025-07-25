@@ -375,7 +375,7 @@
                       <gridbag weightx="0.0" weighty="0.0"/>
                     </constraints>
                     <properties>
-                      <text value="Add New Dog"/>
+                      <text value="New Dog"/>
                     </properties>
                   </component>
                   <vspacer id="88097">

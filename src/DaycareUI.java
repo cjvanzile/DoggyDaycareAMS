@@ -3,6 +3,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
@@ -66,6 +68,7 @@ public class DaycareUI extends JFrame {
         chkShowAll.setSelected(false);
         lblDogNameHeader.setText(null);
         txtDogID.setText(null);
+        txtDogID.setEditable(true);
         txtName.setText(null);
         txtBreed.setText(null);
         txtDOB.setText(null);
@@ -87,6 +90,7 @@ public class DaycareUI extends JFrame {
     public void populateForm(Dog dog) {
         lblDogNameHeader.setText(dog.getName());
         txtDogID.setText(Integer.toString(dog.getId()));
+        txtDogID.setEditable(false);
         txtName.setText(dog.getName());
         txtBreed.setText(dog.getBreed());
         txtDOB.setText(dog.getDob());
@@ -294,24 +298,36 @@ public class DaycareUI extends JFrame {
                     JOptionPane.showMessageDialog(null, "Unable to add dog", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                String name = txtName.getText().trim();
-                String breed = txtBreed.getText().trim();
+                String name;
+                if (!txtName.getText().trim().equals("")) {  // Dog name cannot be empty
+                    name = txtName.getText().trim();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Please enter a dog name", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                String breed;
+                if (!txtBreed.getText().trim().equals("")) {
+                    breed = txtBreed.getText().trim();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Please enter a dog breed", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 Object foodObj = cmbFood.getSelectedItem();
                 int food = Integer.parseInt(((ComboItem)foodObj).getValue());
                 // If adding a dog, set checked-in to false, otherwise leave it unchanged
                 boolean checkedIn = (btnAdd.getText().equals("Update")) ? currentDog.isCheckedIn() : Boolean.parseBoolean("false".trim());
                 String dob = txtDOB.getText().trim();
-                String gender = btnMale.isSelected() ? "M" : btnFemale.isSelected() ? "F" : "X";
-                // Use only first letter spay/neuter status
-                String spayedNeutered = cmbSpayNeuter.getSelectedItem().toString().substring(0, 1);
                 if (!manager.isValidDob(dob)) {
                     JOptionPane.showMessageDialog(null, "Please enter a valid date of birth", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+                String gender = btnMale.isSelected() ? "M" : btnFemale.isSelected() ? "F" : "X";
                 if (!manager.isValidGender(gender)) {
                     JOptionPane.showMessageDialog(null, "Please select a gender", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+                // Use only first letter spay/neuter status
+                String spayedNeutered = cmbSpayNeuter.getSelectedItem().toString().substring(0, 1);
                 if (food < 0) {
                     JOptionPane.showMessageDialog(null, "Please select a food choice", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -451,9 +467,9 @@ public class DaycareUI extends JFrame {
         });
 
         // Select dog from list
-        dogList.addListSelectionListener(new ListSelectionListener() {
+        dogList.addMouseListener(new MouseAdapter() {
             @Override
-            public void valueChanged(ListSelectionEvent e) {
+            public void mouseClicked(MouseEvent e) {
                 if (dogList.getSelectedValue() != null) {
                     String dogInfo = dogList.getSelectedValue().toString();
                     try {
